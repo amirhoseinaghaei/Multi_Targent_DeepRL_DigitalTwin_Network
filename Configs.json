@@ -1,12 +1,12 @@
 {
     "SimulationParameters": 
     {
-        "TotalCPUCapacity" : 80,
-        "NumberOfPS" : 2,
+        "TotalCPUCapacity" : 50,
+        "NumberOfPS" : 5,
         "AoI_sensitivity": 1,
-        "windows": [10,15],
-        "deadlines": [10,15],
-        "startupdate": [2,3],
+        "windows": [10,15,15,10,15],
+        "deadlines": [10,15,15,10,20],
+        "startupdate": [6,3,4,2,5],
         "NumberOfTCh" : 3,
         "NumberOfBits" : 1000,
         "NumberOfCpuCycles" : 100

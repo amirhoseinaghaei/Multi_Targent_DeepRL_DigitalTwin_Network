@@ -1,3 +1,4 @@
+import math
 import time
 import numpy as np 
 
@@ -7,7 +8,11 @@ class WirelessChannel():
         self.N0 = N0
         self.B = B
         self.NumOfPSs  = NumOfPSs
+        self.rou = 0
 
+    def generate_new_channel_gain(self, NumberOfTch, ps_gain):
+        print(self.rou * ps_gain + np.random.uniform(0,1-math.pow(self.rou,2),size=3))
+        return self.rou * ps_gain + np.random.uniform(0,1-math.pow(self.rou,2),size=3)
     def calculate_transmission_rate(self, channel_gain, interference_gain, interference_power, power):
         rate = 0
         for i in range(len(channel_gain)):
