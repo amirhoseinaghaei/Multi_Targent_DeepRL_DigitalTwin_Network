@@ -5,12 +5,17 @@
         "NumberOfPS" : 2,
         "AoI_sensitivity": 0.1,
         "windows": [10,15,15,10,15],
-        "deadlines": [15,20,15,10,20],
+        "deadlines": [15,25,15,10,20],
         "startupdate": [6,3,4,2,5],
         "NumberOfTCh" : 1,
-        "NumberOfBits" : [1000,2000,700,900,800],
+        "NumberOfBits" : [1000,1600,700,900,800],
         "NumberOfCpuCycles" : [100,100,100,100,100]
-
+        B = 100
+        N = 0.001
+        AOI WEIGHT = 5 
+        INTERFERENCE = [1,2]
+        PowerReward = yes 
+        
 
     }
-}  
+}

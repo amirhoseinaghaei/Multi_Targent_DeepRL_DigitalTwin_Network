@@ -1,6 +1,3 @@
-{
-    "SimulationParameters": 
-    {
         "TotalCPUCapacity" : 50,
         "NumberOfPS" : 2,
         "AoI_sensitivity": 0.1,
@@ -10,7 +7,6 @@
         "NumberOfTCh" : 1,
         "NumberOfBits" : [1000,2000,700,900,800],
         "NumberOfCpuCycles" : [100,100,100,100,100]
-
-
-    }
-}  
+        B = 100 
+        N  = 0.001
+        interference_noise = [0,1]

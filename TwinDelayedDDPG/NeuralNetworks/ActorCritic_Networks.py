@@ -13,7 +13,7 @@ class Actor(nn.Module):
     def forward(self,x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
-        x = self.max_action * F.tanh(self.layer3(x))
+        x = self.max_action * torch.tanh(self.layer3(x))
         return x
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
