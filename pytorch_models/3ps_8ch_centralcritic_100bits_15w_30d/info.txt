@@ -2,15 +2,15 @@
     "SimulationParameters": 
     {
         "TotalCPUCapacity" : 50,
-        "NumberOfPS" : 4,
+        "NumberOfPS" : 3,
         "AoI_sensitivity": 0.1,
-        "windows": [20,20,20,20,25,25],
-        "deadlines": [40,40,40,40,50,50],
+        "windows": [15,15,15,25,25,25],
+        "deadlines": [30,30,30,50,50,50],
         "startupdate": [3,3,4,4,5,2],
         "NumberOfTCh" : 1,
         "NumberOfBits" : [100,100,100,100,100,100],
         "NumberOfCpuCycles" : [100,100,100,100,100,100]
 
-
+        NumofGainState = 8
     }
 }  

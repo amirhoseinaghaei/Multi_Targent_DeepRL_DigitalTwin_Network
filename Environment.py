@@ -21,7 +21,9 @@ AoI_sensitivity = SimulationParams.AoI_sensitivity
 class CustumEnv(gym.Env):
    
     def __init__(self, NumOfPS):
-      self.Wireless_Tr_Channels = WirelessChannel(0.001,100 , NumOfPSs= NumberOfPS)
+      self.Wireless_Tr_Channels = WirelessChannel(0.0000001,21 , NumOfPSs= NumberOfPS)
+      self.Wireless_Tr_Channels.generate_gain_list()
+      self.Wireless_Tr_Channels.generate_transition_probability_matrix()
       self.Bits_Dict = dict()
       self.CPU_Dict = dict()
       self.AoIs_Dict = dict()
@@ -67,8 +69,9 @@ class CustumEnv(gym.Env):
         return {"Interference_Channel_Gain": new_dict}
     def reset(self, ps, seed = None, options = None):
         if ps <= self.NumOfPS:
-            self._ps_gain[f"ps{ps}"] = self.np_random.uniform(0, 1,1)
-            self._ps_AoI[f"ps{ps}"] = np.random.randint(1,4)*self.windows[ps]
+            self._ps_gain[f"ps{ps}"] = [np.random.choice(self.Wireless_Tr_Channels.gain_list[ps])]
+            # np.random.randint(1,4)
+            self._ps_AoI[f"ps{ps}"] = np.random.randint(1,3)*self.windows[ps]
             self._ps_U[f"ps{ps}"] = self.Bits_Dict[ps] + self.CPU_Dict[ps]
             self.AoIs_Dict[ps] = [(self._ps_AoI[f"ps{ps}"],0)]
             self.Data_Dict[ps] = [(self._ps_U[f"ps{ps}"],0)]
@@ -77,7 +80,7 @@ class CustumEnv(gym.Env):
 
         return np.array(list(self._ps_gain[f"ps{ps}"]) + [self._ps_AoI[f"ps{ps}"]] + [self._ps_U[f"ps{ps}"]])
     def channel_gains_transition(self, ps):
-        self._ps_gain[f"ps{ps}"] = self.Wireless_Tr_Channels.generate_new_channel_gain(NumberOfTch , self._ps_gain[f"ps{ps}"])           
+        self._ps_gain[f"ps{ps}"] = self.Wireless_Tr_Channels.generate_new_channel_gain(NumberOfTch , self._ps_gain[f"ps{ps}"], ps)           
 
     def step(self, action, time):
         self.E = []
@@ -93,16 +96,12 @@ class CustumEnv(gym.Env):
                     self._ps_U[f"ps{ps}"] = self.Bits_Dict[ps] + self.CPU_Dict[ps]
                 self.AoIs_Dict[ps].append((self._ps_AoI[f"ps{ps}"], time))
                 self.Data_Dict[ps].append((self._ps_U[f"ps{ps}"],time))
-                self._ps_AoI[f"ps{ps}"] += 1
-                self.channel_gains_transition(ps)
                 reward[ps] = 0
                 done[ps] = 0
                 terminal[ps] = 0
             elif time%(self.windows[ps]) ==  self.start_update[ps] and time >= self.start_update[ps]:
                 self.AoIs_Dict[ps].append((self._ps_AoI[f"ps{ps}"], time))
                 self.Data_Dict[ps].append((self._ps_U[f"ps{ps}"],time))
-
-                self._ps_AoI[f"ps{ps}"] += 1
                 rest_action = copy.deepcopy(action)
                 rest_action.pop(ps)
                 self._ps_U[f"ps{ps}"] = np.maximum(self.CPU_Dict[ps],self._ps_U[f"ps{ps}"] - self.Wireless_Tr_Channels.calculate_transmission_rate(channel_gain= list(self._get_obs(ps)["Channel_Gain"]), interference_gain = self._get_info(ps)["Interference_Channel_Gain"] , interference_power = rest_action, power= action[ps]))
@@ -111,20 +110,16 @@ class CustumEnv(gym.Env):
                 else:
                     done[ps] = 0 
                 terminal[ps] = 0
-                self.channel_gains_transition(ps)
-                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 5, PS = ps )
+                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 1, PS = ps )
             elif self.CPU_Dict[ps] < self._ps_U[f"ps{ps}"] <= self.Bits_Dict[ps] + self.CPU_Dict[ps] and time%(self.windows[ps]) != self.start_update[ps] and time >= self.start_update[ps]:
                 self.AoIs_Dict[ps].append((self._ps_AoI[f"ps{ps}"], time))
                 self.Data_Dict[ps].append((self._ps_U[f"ps{ps}"],time))
-
-                self._ps_AoI[f"ps{ps}"] += 1
                 rest_action = copy.deepcopy(action)
                 rest_action.pop(ps)
                 self._ps_U[f"ps{ps}"] = np.maximum(self.CPU_Dict[ps],self._ps_U[f"ps{ps}"] - self.Wireless_Tr_Channels.calculate_transmission_rate(channel_gain= list(self._get_obs(ps)["Channel_Gain"]), interference_gain = self._get_info(ps)["Interference_Channel_Gain"] , interference_power = rest_action, power= action[ps]))
                 if (time+1)%(self.windows[ps]) == self.start_update[ps]:
                     self._ps_U[f"ps{ps}"] = self.Bits_Dict[ps] + self.CPU_Dict[ps]
-                self.channel_gains_transition(ps)
-                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 5, PS = ps )
+                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 1, PS = ps )
                 if self._ps_U[f"ps{ps}"] == self.CPU_Dict[ps]:
                     done[ps] = 1
                 else:
@@ -133,11 +128,9 @@ class CustumEnv(gym.Env):
             elif 0 < self._ps_U[f"ps{ps}"] <= self.CPU_Dict[ps] and time%(self.windows[ps]) != self.start_update[ps]:
                 self.Data_Dict[ps].append((self._ps_U[f"ps{ps}"],time))
                 self.AoIs_Dict[ps].append((self._ps_AoI[f"ps{ps}"], time))
-                self._ps_AoI[f"ps{ps}"] += 1
-
-                self.channel_gains_transition(ps)
-
                 self.E.append(ps)
+
+
         self.P = 1
         while self.P != 0:
             for n in self.E:                 
@@ -155,16 +148,36 @@ class CustumEnv(gym.Env):
                 reward[ps] = self.deterministic_reward(AoI= self._ps_AoI[f'ps{n}'], PS= n)
             if len(self.E) == 0:
                 break    
+        for ps in range(1, self.NumOfPS +1 ):
+            self._ps_AoI[f"ps{ps}"] += 1
+            self.channel_gains_transition(ps)
         return (self._ps_gain, self._ps_AoI, self._ps_U), reward, done, terminal    
     def stochastic_reward(self, action, AoI, AoI_weight , PS):
         reward = 0
-        for i in (action):
-            reward += i
-        reward = -1*reward
-        reward = reward - AoI_weight*np.maximum(0,np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))-1)
+        # for i in (action):
+        #     reward += i
+        # reward = -1*reward
+        Cooperative_Reward = 0 
+        for ps in range(1, self.NumOfPS +1 ):
+            if ps != PS:
+                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else -1/(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+                Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
+        
+        coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
+        # Cooperative_Reward =0
+        power_coef = 0 if (self.deadlines[PS] - AoI) <= 0 else (self.deadlines[PS] - AoI)/10
+        reward = power_coef*reward + AoI_weight*(coef)*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + AoI_weight*(1)*(Cooperative_Reward/1)
+
         return reward
     def deterministic_reward(self, AoI, PS):
-        reward =  -np.maximum(0,np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))-1)
+        Cooperative_Reward = 0 
+        for ps in range(1, self.NumOfPS +1 ):
+            if ps != PS:
+                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else -1/(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+                Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
+        coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
+        # Cooperative_Reward =0
+        reward =  coef*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + (1)*(Cooperative_Reward/1)
         if reward == -0:
             reward = 0
         return reward
