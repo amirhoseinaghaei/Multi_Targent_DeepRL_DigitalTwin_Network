@@ -160,7 +160,7 @@ class CustumEnv(gym.Env):
         Cooperative_Reward = 0 
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
-                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else -1/(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
                 Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
         
         coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
@@ -173,7 +173,7 @@ class CustumEnv(gym.Env):
         Cooperative_Reward = 0 
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
-                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else -1/(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
                 Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
         coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
         # Cooperative_Reward =0

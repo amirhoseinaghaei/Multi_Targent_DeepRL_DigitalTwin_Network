@@ -11,7 +11,7 @@ class WirelessChannel():
         self.rou = 0
         self.gain_transition_matrix = {}
         self.gain_list = {}
-        self.NumOfGainstates = 3
+        self.NumOfGainstates = 8
         self.variance = [0.01,0.02,0.03,0.02,0.01]
     def generate_gain_list(self):
 

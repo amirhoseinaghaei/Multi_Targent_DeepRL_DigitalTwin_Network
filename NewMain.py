@@ -140,10 +140,10 @@ central_critic = Central_Critic(state_dim= SimulationParams.NumberOfTCh + 2, N= 
 
 if Test == True:
 
-  policy[1].load(f"{1}th PS", f"./pytorch_models")
-  policy[2].load(f"{2}th PS", f"./pytorch_models")
-  policy[3].load(f"{3}th PS", f"./pytorch_models")
-  policy[4].load(f"{4}th PS", f"./pytorch_models")
+  policy[1].load(f"{1}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
+  policy[2].load(f"{2}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
+  policy[3].load(f"{3}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
+  policy[4].load(f"{4}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
   # policy[5].load(f"{5}th PS", f"./pytorch_models")
   # policy[6].load(f"{6}th PS", f"./pytorch_models")
 
@@ -311,7 +311,7 @@ if Test == True:
   # plt.plot(AoI_dict3["1"] , color = "black", label = "With RL Scheduler - cooperative - with power")
   # plt.plot(AoI_dict2["1"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
   plt.plot(AoI_dictRandom["1"] , color = "red", label = "Random selection")
-  plt.axhline(y = 40, color = "orange", linestyle = 'solid', label = "deadline ps1", )
+  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps1", )
   plt.legend(loc = "best")
 
   plt.figure(2)
@@ -320,7 +320,7 @@ if Test == True:
   # plt.plot(AoI_dict3["2"] , color = "black", label = "With RL Scheduler - cooperative - with power")
   # plt.plot(AoI_dict2["2"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
   plt.plot(AoI_dictRandom["2"] , color = "red", label = "Random selection")
-  plt.axhline(y = 40, color = "orange", linestyle = 'solid', label = "deadline ps2", )
+  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps2", )
   plt.legend(loc = "best")
 
   plt.figure(3)
@@ -329,7 +329,7 @@ if Test == True:
   # plt.plot(AoI_dict3["3"] , color = "black", label = "With RL Scheduler - cooperative - with power")
   # plt.plot(AoI_dict2["3"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
   plt.plot(AoI_dictRandom["3"] , color = "red", label = "Random selection")
-  plt.axhline(y = 40, color = "orange", linestyle = 'solid', label = "deadline ps3", )
+  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps3", )
   plt.legend(loc = "best")
 
   plt.figure(4)
@@ -338,7 +338,7 @@ if Test == True:
   # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
   # plt.plot(AoI_dict2["4"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
   plt.plot(AoI_dictRandom["4"] , color = "red", label = "Random selection")
-  plt.axhline(y = 40, color = "orange", linestyle = 'solid', label = "deadline ps4", )
+  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps4", )
   plt.legend(loc = "best")
 
 
@@ -476,7 +476,7 @@ else:
           f.write(Json)
           f.close()
     for ps in range(1,NumberOfPS+1):
-      if total_timesteps > 200:
+      if total_timesteps%50 == 0 and total_timesteps > 200:
         central_critic = policy[ps].train(central_critic, 200, policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
         policy[ps].save(f"{ps}th PS", "./pytorch_models")
       if episode_timesteps[ps] >= 200:
