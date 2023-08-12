@@ -76,7 +76,7 @@ noise_clip =  0.005
 policy_noise = 0.005
 policy_freq = 2
 max_timesteps = 4e4
-start_timesteps = 3e3
+start_timesteps = 2e3
 total_timesteps = 0
 episode_num = dict()
 episode_reward = dict()
@@ -476,7 +476,7 @@ else:
           f.write(Json)
           f.close()
     for ps in range(1,NumberOfPS+1):
-      if total_timesteps > 400:
+      if total_timesteps > 200:
         central_critic = policy[ps].train(central_critic, 200, policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
         policy[ps].save(f"{ps}th PS", "./pytorch_models")
       if episode_timesteps[ps] >= 200:
