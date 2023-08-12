@@ -424,6 +424,7 @@ if Test == True:
 
 else:
   Results = dict()  
+  TimeSteps = {"Time":0}
   for ps in range(1,NumberOfPS+1):
     Results[ps] = []
   if not os.path.exists("./results"):
@@ -456,6 +457,11 @@ else:
     ax.autoscale_view()
     plt.pause(0.1)
   while total_timesteps < max_timesteps :
+    TimeSteps["Time"] = total_timesteps
+    Json1 = json.dumps(TimeSteps)
+    f = open("./results/Time.json","w")
+    f.write(Json1)
+    f.close()
     print(timesteps_since_eval)
     if timesteps_since_eval >= eval_freq:
           timesteps_since_eval %= eval_freq
