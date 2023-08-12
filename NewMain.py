@@ -68,7 +68,7 @@ save_models = True
 expl_noise_min = 0.001
 epsilon = 5e-4
 expl_noise = 0.002
-eval_freq = 10
+eval_freq = 200
 batch_size = 100
 tau = 0.005
 discount = 0.99
@@ -423,8 +423,9 @@ if Test == True:
   plt.show()
 
 else:
-      
-    
+  Results = dict()  
+  for ps in range(1,NumberOfPS+1):
+    Results[ps] = []
   if not os.path.exists("./results"):
       os.makedirs("./results")
   if save_models and not os.path.exists("./pytorch_models"):
@@ -462,13 +463,14 @@ else:
           update(res[1])
           print(signal)
           Evaluations.append(score)
-          Reward_Evaluations.append(res)
-          with open(f"./results/RESULTS1.txt", "w") as fp:
-            json.dump(Evaluations, fp)
-          with open(f"./results/RESULTS2.txt", "w") as fp:
-            json.dump(Reward_Evaluations, fp)
+          for ps in range(1,NumberOfPS+1):
+            Results[ps].append(res[ps])
+          Json = json.dumps(Results)
+          f = open("./results/Results.json","w")
+          f.write(Json)
+          f.close()
     for ps in range(1,NumberOfPS+1):
-      if total_timesteps != 0:
+      if total_timesteps > 400:
         central_critic = policy[ps].train(central_critic, 200, policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
         policy[ps].save(f"{ps}th PS", "./pytorch_models")
       if episode_timesteps[ps] >= 200:
