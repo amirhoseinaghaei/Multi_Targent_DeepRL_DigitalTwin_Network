@@ -11,19 +11,13 @@ class WirelessChannel():
         self.rou = 0
         self.gain_transition_matrix = {}
         self.gain_list = {}
-        self.NumOfGainstates = 8
-        self.variance = [0.01,0.02,0.03,0.02,0.01]
+        self.NumOfGainstates = 3
     def generate_gain_list(self):
 
-        # for ps in range(1,self.NumOfPSs+1):
-        #     self.gain_list[ps] = []
-        #     for i in range(self.NumOfGainstates):
-        #         self.gain_list[ps].append(np.sqrt(-2*((self.variance[ps-1]))*np.log(1-(i/self.NumOfGainstates))))
-        # return Channel_gains
         for ps in range(1,self.NumOfPSs+1):
             self.gain_list[ps] = []
             for i in range(self.NumOfGainstates):
-                self.gain_list[ps].append((ps*2)+ 4*(i))
+                self.gain_list[ps].append((ps*3)+ 4*(i))
         print(self.gain_list)
     def generate_transition_probability_matrix(self):
         for ps in range(1,self.NumOfPSs+1):

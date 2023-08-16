@@ -24,11 +24,13 @@ def evaluate_policy(Env, policy, eval_episodes = 10):
   scores = dict()
   cumulative = dict()
   avg_reward = dict()
+  AoIs = dict()
   cr_reward = dict()
   action = dict()
   states = dict()
   for i in range(1,NumberOfPS+1):
      avg_reward[i] = 0 
+     AoIs[i] = 0
      cr_reward[i] = 0
      scores[i] = 0
   for j in range(eval_episodes):
@@ -43,7 +45,6 @@ def evaluate_policy(Env, policy, eval_episodes = 10):
         action[i] = policy[i].select_action(states[i])
         action[i] = abs(action[i])
       states, rewards, dones, terminal = Env.step(action= action, time= time)
-      
       states = {
           i: np.array(list(states[0][f"ps{i}"]) + [states[1][f"ps{i}"]] + [states[2][f"ps{i}"]])
           for i in range(1, NumberOfPS + 1)
@@ -51,19 +52,20 @@ def evaluate_policy(Env, policy, eval_episodes = 10):
       time += 1
       for i in range(1,NumberOfPS+1):
         avg_reward[i] += rewards[i]
+        AoIs[i] += states[i][1]
         cr_reward[i] += rewards[i]
     for i in range(1,NumberOfPS+1):
       scores[i] = scores[i] + 1 if cr_reward[i] > -100 else scores[i]
   for i in range(1,NumberOfPS+1):
       avg_reward[i] = avg_reward[i]/eval_episodes
-      scores[i] = scores[i]/10
+      AoIs[i] = AoIs[i]/eval_episodes 
+      scores[i] = scores[i]/eval_episodes
   signal = True
   for i in range(1,NumberOfPS+1):
-    if avg_reward[i] <= -50:
-
+    if AoIs[i] >= 200*70:
         signal = False
         break
-  return avg_reward, signal , scores
+  return avg_reward, signal , scores, AoIs
 save_models = True
 expl_noise_min = 0.001
 epsilon = 5e-4
@@ -75,8 +77,8 @@ discount = 0.99
 noise_clip =  0.005
 policy_noise = 0.005
 policy_freq = 2
-max_timesteps = 4e4
-start_timesteps = 2e3
+max_timesteps = 5e3
+start_timesteps = 4e3
 total_timesteps = 0
 episode_num = dict()
 episode_reward = dict()
@@ -114,8 +116,7 @@ Env = CustumEnv(NumberOfPS)
 Env2 = CustumEnv(NumberOfPS)
 Env3 = CustumEnv(NumberOfPS)
 EnvRandom = CustumEnv(NumberOfPS)
-Test = False
-model = 9
+Test = True
 policy = dict()
 policy2 = dict()
 policy3 = dict()
@@ -138,13 +139,14 @@ for i in range(1,NumberOfPS+1):
 
 central_critic = Central_Critic(state_dim= SimulationParams.NumberOfTCh + 2, N= NumberOfPS, action_dim= 1)
 
+
 if Test == True:
 
-  policy[1].load(f"{1}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
-  policy[2].load(f"{2}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
-  policy[3].load(f"{3}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
-  policy[4].load(f"{4}th PS", f"./pytorch_models/4ps_3ch_centralcritic_100bits_25w_50d")
-  # policy[5].load(f"{5}th PS", f"./pytorch_models")
+  policy[1].load(f"{1}th PS", f"./pytorch_models")
+  policy[2].load(f"{2}th PS", f"./pytorch_models")
+  policy[3].load(f"{3}th PS", f"./pytorch_models")
+  policy[4].load(f"{4}th PS", f"./pytorch_models")
+  policy[5].load(f"{5}th PS", f"./pytorch_models")
   # policy[6].load(f"{6}th PS", f"./pytorch_models")
 
   # policy2[1].load(f"{1}th PS", f"./pytorch_models/Non_CooperativeWithPower5PS")
@@ -306,59 +308,78 @@ if Test == True:
   # print(f"Average AoI for ps4 without RL scheduler: {sum(AoI_dictRandom['4'])/Max_StepsRandom[4]}")
 
   plt.figure(1)
-  plt.title("AoI change ps1")
-  plt.plot(AoI_dict["1"] , color = "green", label = "With RL Scheduler - cooperative")
+  plt.title("AoI change with cooperative RL algorithm, Nₖ = 3")
+  plt.plot(AoI_dict["1"] , label = "ps1",  linestyle = "dashed")
+  plt.plot(AoI_dict["2"] , label = "ps2",  linestyle = "dashed")
+  plt.plot(AoI_dict["3"] , label = "ps3",  linestyle = "dashed")
+  plt.plot(AoI_dict["4"] , label = "ps4",  linestyle = "dashed")
+  plt.plot(AoI_dict["5"] , label = "ps5",  linestyle = "dashed")
+  plt.plot(AoI_dict["6"] , label = "ps6",  linestyle = "dashed")
+
   # plt.plot(AoI_dict3["1"] , color = "black", label = "With RL Scheduler - cooperative - with power")
   # plt.plot(AoI_dict2["1"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["1"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps1", )
+  # plt.plot(AoI_dictRandom["1"] , color = "red", label = "Random selection")
+  plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline", )
   plt.legend(loc = "best")
-
   plt.figure(2)
-  plt.title("AoI change ps2")
-  plt.plot(AoI_dict["2"] , color = "green", label = "With RL Scheduler - cooperative")
-  # plt.plot(AoI_dict3["2"] , color = "black", label = "With RL Scheduler - cooperative - with power")
-  # plt.plot(AoI_dict2["2"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["2"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps2", )
-  plt.legend(loc = "best")
+  plt.title("AoI change with random selection, Nₖ = 3")
+  plt.plot(AoI_dictRandom["1"] , label = "ps1",  linestyle = "dashed")
+  plt.plot(AoI_dictRandom["2"] , label = "ps2",  linestyle = "dashed")
+  plt.plot(AoI_dictRandom["3"] , label = "ps3", linestyle = "dashed" )
+  plt.plot(AoI_dictRandom["4"] , label = "ps4",  linestyle = "dashed")
+  plt.plot(AoI_dictRandom["5"] , label = "ps5",  linestyle = "dashed")
+  plt.plot(AoI_dictRandom["6"] , label = "ps6",  linestyle = "dashed")
 
-  plt.figure(3)
-  plt.title("AoI change ps3")
-  plt.plot(AoI_dict["3"] , color = "green", label = "With RL Scheduler - cooperative")
-  # plt.plot(AoI_dict3["3"] , color = "black", label = "With RL Scheduler - cooperative - with power")
-  # plt.plot(AoI_dict2["3"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["3"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps3", )
+  # plt.plot(AoI_dict3["1"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # plt.plot(AoI_dict2["1"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["1"] , color = "red", label = "Random selection")
+  plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline", )
   plt.legend(loc = "best")
+  # plt.figure(2)
+  # plt.title("AoI change ps2")
+  # plt.plot(AoI_dict["2"] , color = "green", label = "With RL Scheduler - cooperative")
+  # # plt.plot(AoI_dict3["2"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # # plt.plot(AoI_dict2["2"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["2"] , color = "red", label = "Random selection")
+  # plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline ps2", )
+  # plt.legend(loc = "best")
 
-  plt.figure(4)
-  plt.title("AoI change ps4")
-  plt.plot(AoI_dict["4"] , color = "green", label = "With RL Scheduler - cooperative")
-  # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
-  # plt.plot(AoI_dict2["4"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["4"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps4", )
-  plt.legend(loc = "best")
+  # plt.figure(3)
+  # plt.title("AoI change ps3")
+  # plt.plot(AoI_dict["3"] , color = "green", label = "With RL Scheduler - cooperative")
+  # # plt.plot(AoI_dict3["3"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # # plt.plot(AoI_dict2["3"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["3"] , color = "red", label = "Random selection")
+  # plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline ps3", )
+  # plt.legend(loc = "best")
+
+  # plt.figure(4)
+  # plt.title("AoI change ps4")
+  # plt.plot(AoI_dict["4"] , color = "green", label = "With RL Scheduler - cooperative")
+  # # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # # plt.plot(AoI_dict2["4"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["4"] , color = "red", label = "Random selection")
+  # plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline ps4", )
+  # plt.legend(loc = "best")
 
 
-  plt.figure(5)
-  plt.title("AoI change ps5")
-  plt.plot(AoI_dict["5"] , color = "green", label = "With RL Scheduler - cooperative")
-  # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
-  # plt.plot(AoI_dict2["5"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["5"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps5", )
-  plt.legend(loc = "best")
+  # plt.figure(5)
+  # plt.title("AoI change ps5")
+  # plt.plot(AoI_dict["5"] , color = "green", label = "With RL Scheduler - cooperative")
+  # # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # # plt.plot(AoI_dict2["5"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["5"] , color = "red", label = "Random selection")
+  # plt.axhline(y = 70, color = "orange", linestyle = 'solid', label = "deadline ps5", )
+  # plt.legend(loc = "best")
   
-  plt.figure(6)
-  plt.title("AoI change ps6")
-  plt.plot(AoI_dict["6"] , color = "green", label = "With RL Scheduler - cooperative")
-  # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
-  # plt.plot(AoI_dict2["5"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
-  plt.plot(AoI_dictRandom["6"] , color = "red", label = "Random selection")
-  plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps6", )
-  plt.legend(loc = "best")
+  # plt.figure(6)
+  # plt.title("AoI change ps6")
+  # plt.plot(AoI_dict["6"] , color = "green", label = "With RL Scheduler - cooperative")
+  # # plt.plot(AoI_dict3["4"] , color = "black", label = "With RL Scheduler - cooperative - with power")
+  # # plt.plot(AoI_dict2["5"] , color = "blue", label = "With RL Scheduler - Non-cooperative")
+  # plt.plot(AoI_dictRandom["6"] , color = "red", label = "Random selection")
+  # plt.axhline(y = 50, color = "orange", linestyle = 'solid', label = "deadline ps6", )
+  # plt.legend(loc = "best")
   # plt.figure(5)
   # plt.title("Power usage of PS1")
   # plt.plot(Power_dict["1"] , color = "green", label = "Cooperative")
@@ -424,9 +445,11 @@ if Test == True:
 
 else:
   Results = dict()  
+  Results2 = dict()
   TimeSteps = {"Time":0}
   for ps in range(1,NumberOfPS+1):
     Results[ps] = []
+    Results2[ps] = []
   if not os.path.exists("./results"):
       os.makedirs("./results")
   if save_models and not os.path.exists("./pytorch_models"):
@@ -465,15 +488,23 @@ else:
     print(timesteps_since_eval)
     if timesteps_since_eval >= eval_freq:
           timesteps_since_eval %= eval_freq
-          res, signal, score = evaluate_policy(Env= Env, policy= policy)
-          update(res[1])
+          res, signal, score , Avg_AoI = evaluate_policy(Env= Env, policy= policy)
           print(signal)
+          update(res[1])
+          if signal == True:
+            break
           Evaluations.append(score)
           for ps in range(1,NumberOfPS+1):
             Results[ps].append(res[ps])
           Json = json.dumps(Results)
           f = open("./results/Results.json","w")
           f.write(Json)
+          f.close()
+          for ps in range(1,NumberOfPS+1):
+            Results2[ps].append(Avg_AoI[ps])
+          Json2 = json.dumps(Results2)
+          f = open("./results/Results2.json","w")
+          f.write(Json2)
           f.close()
     for ps in range(1,NumberOfPS+1):
       if total_timesteps%50 == 0 and total_timesteps > 200:
