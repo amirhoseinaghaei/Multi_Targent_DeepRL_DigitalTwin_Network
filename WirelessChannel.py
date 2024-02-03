@@ -1,24 +1,24 @@
+import json
 import math
 import time
 import numpy as np 
 
 
 class WirelessChannel():
-    def __init__(self, N0, B , NumOfPSs):
+    def __init__(self, N0, B , NumOfPSs, NumOfGainstates):
         self.N0 = N0
         self.B = B
         self.NumOfPSs  = NumOfPSs
         self.rou = 0
         self.gain_transition_matrix = {}
         self.gain_list = {}
-        self.NumOfGainstates = 3
+        self.NumOfGainstates = NumOfGainstates
     def generate_gain_list(self):
 
         for ps in range(1,self.NumOfPSs+1):
             self.gain_list[ps] = []
             for i in range(self.NumOfGainstates):
                 self.gain_list[ps].append((ps*3)+ 4*(i))
-        print(self.gain_list)
     def generate_transition_probability_matrix(self):
         for ps in range(1,self.NumOfPSs+1):
             self.gain_transition_matrix[ps] = []
@@ -28,7 +28,8 @@ class WirelessChannel():
                     # ((y+1)*0.3)/self.gen_Sum()
                     row.append(((y+0.5)*0.2)/self.gen_Sum())
                 self.gain_transition_matrix[ps].append(row)
-        print(self.gain_transition_matrix)
+        print(len(self.gain_transition_matrix[1]))
+        return self.gain_transition_matrix
     def gen_Sum(self):
         sum = 0
         for i in range(self.NumOfGainstates):

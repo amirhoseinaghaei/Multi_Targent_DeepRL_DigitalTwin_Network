@@ -11,7 +11,7 @@ SimulationParams = SimulationParameters("Configs.json")
 SimulationParams.Configure()
 NumOfPSs = SimulationParams.NumberOfPS
 
-device = torch.device("cude" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class NewTD3(object):
     def __init__(self, state_dim, action_dim, N, max_action, epsilon):
@@ -49,6 +49,8 @@ class NewTD3(object):
             OGactions = {}
             OGrewards = {}
             OGdones = {}
+            OGshaped_reward = {}
+            OGshaped_reward_next = {}
             OGnext_states = {}
             OGnext_actions = {}
             OGnoise = {}
@@ -58,12 +60,15 @@ class NewTD3(object):
             ind = np.random.randint(0,minstorage, batch_size)
 
             for p in range(1,NumOfPSs+1):
-                batch_state, batch_action, batch_next_state, batch_reward, batch_done = replay_buffers[p].sample(batch_size , ind )
+                batch_state, batch_action, batch_next_state, batch_reward, batch_done, shaped_reward , shaped_reward_next = replay_buffers[p].sample(batch_size , ind )
                 OGstates[p] = torch.Tensor(batch_state).to(device = device)
                 OGactions[p] = torch.Tensor(batch_action).to(device = device)
                 OGnext_states[p] = torch.Tensor(batch_next_state).to(device = device)
                 OGrewards[p] = torch.Tensor(batch_reward).to(device = device)
                 OGdones[p] = torch.Tensor(batch_done).to(device = device)
+                OGshaped_reward[p] = torch.Tensor(shaped_reward).to(device = device)
+                OGshaped_reward_next[p] = torch.Tensor(shaped_reward_next).to(device = device)
+
                 OGnext_actions[p] = policies[p].Actor_Target.forward(OGnext_states[p])            
                 OGnoise[p] = torch.Tensor(batch_action).data.normal_(0, self.policy_noise).to(device = device)
                 OGnoise[p] = OGnoise[p].clamp(-noise_clip, + noise_clip)
@@ -78,7 +83,8 @@ class NewTD3(object):
             target_Q1 , target_Q2 = central_critic.Critic_Target.forward(input)
             target_Q = torch.min(target_Q1, target_Q2)
             target_Q = torch.reshape(target_Q, (-1,))
-            target_Q = OGrewards[ps] + ((1-OGdones[ps])*discount*target_Q).detach()
+            gamma = 0.95
+            target_Q = OGrewards[ps] + (gamma*OGshaped_reward_next[ps] - OGshaped_reward[ps]) + ((1-OGdones[ps])*discount*target_Q).detach()
             currentinput = []
             for p in range(1,NumOfPSs+1):
                 currentinput.append(OGstates[p])

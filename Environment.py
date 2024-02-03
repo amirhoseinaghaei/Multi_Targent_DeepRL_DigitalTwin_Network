@@ -20,10 +20,11 @@ AoI_sensitivity = SimulationParams.AoI_sensitivity
 
 class CustumEnv(gym.Env):
    
-    def __init__(self, NumOfPS):
-      self.Wireless_Tr_Channels = WirelessChannel(0.0000001,21 , NumOfPSs= NumberOfPS)
+    def __init__(self, NumOfPS, NumOfGainstates):
+      self.Wireless_Tr_Channels = WirelessChannel(0.0000001,21 , NumOfPSs= NumberOfPS ,NumOfGainstates= NumOfGainstates)
       self.Wireless_Tr_Channels.generate_gain_list()
       self.Wireless_Tr_Channels.generate_transition_probability_matrix()
+      
       self.Bits_Dict = dict()
       self.CPU_Dict = dict()
       self.AoIs_Dict = dict()
@@ -70,6 +71,7 @@ class CustumEnv(gym.Env):
     def reset(self, ps, seed = None, options = None):
         if ps <= self.NumOfPS:
             self._ps_gain[f"ps{ps}"] = [np.random.choice(self.Wireless_Tr_Channels.gain_list[ps])]
+
             # np.random.randint(1,4)
             self._ps_AoI[f"ps{ps}"] = np.random.randint(1,3)*self.windows[ps]
             self._ps_U[f"ps{ps}"] = self.Bits_Dict[ps] + self.CPU_Dict[ps]
@@ -77,11 +79,9 @@ class CustumEnv(gym.Env):
             self.Data_Dict[ps] = [(self._ps_U[f"ps{ps}"],0)]
 
             observation = self._get_obs(ps)
-
         return np.array(list(self._ps_gain[f"ps{ps}"]) + [self._ps_AoI[f"ps{ps}"]] + [self._ps_U[f"ps{ps}"]])
     def channel_gains_transition(self, ps):
         self._ps_gain[f"ps{ps}"] = self.Wireless_Tr_Channels.generate_new_channel_gain(NumberOfTch , self._ps_gain[f"ps{ps}"], ps)           
-
     def step(self, action, time):
         self.E = []
         reward = dict()
@@ -153,31 +153,82 @@ class CustumEnv(gym.Env):
             self.channel_gains_transition(ps)
         return (self._ps_gain, self._ps_AoI, self._ps_U), reward, done, terminal    
     def stochastic_reward(self, action, AoI, AoI_weight , PS):
-        reward = 0
+        # reward = 0
         # for i in (action):
         #     reward += i
         # reward = -1*reward
+        # Cooperative_Reward = 0 
+        # for ps in range(1, self.NumOfPS +1 ):
+        #     if ps != PS:
+        #         coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+        #         Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
+        
+        # coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
+        # # Cooperative_Reward =0
+        # power_coef = 0 if (self.deadlines[PS] - AoI) <= 0 else (self.deadlines[PS] - AoI)/10
+        # reward = power_coef*reward + AoI_weight*(coef)*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + AoI_weight*(1)*(Cooperative_Reward/1)
+        reward = 0
+        for i in (action):
+            reward += i
+        reward = -1*reward
+        # if reward == 0:
+        #     reward = 0.00001
         Cooperative_Reward = 0 
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
-                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
-                Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
+                diff =  (((self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])))
+                
+                # Cooperative_Reward += np.exp(-0.1*(diff))
+                Cooperative_Reward += diff
+        # /(0.5* (-1*reward))
+        # ## Simple reward
         
-        coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
-        # Cooperative_Reward =0
-        power_coef = 0 if (self.deadlines[PS] - AoI) <= 0 else (self.deadlines[PS] - AoI)/10
-        reward = power_coef*reward + AoI_weight*(coef)*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + AoI_weight*(1)*(Cooperative_Reward/1)
+        # reward = 1*reward + 1*(self.deadlines[PS] - AoI)  + Cooperative_Reward
 
+
+        reward = ((self.deadlines[PS] - AoI)  - 0.9 * Cooperative_Reward) * reward + (self.deadlines[PS] - AoI)
+
+
+        ### Reciprocal Reward
+        # if (self.deadlines[PS] - AoI -10) > 0: 
+        #     reward = ((self.deadlines[PS] - AoI - 10) / reward) + Cooperative_Reward
+
+        # elif (self.deadlines[PS] - AoI -10) == 0:
+        #     reward = ((10) / (-1*reward)) + Cooperative_Reward
+        # else:
+        #     reward = (((self.deadlines[PS] - AoI -10 )*100) / reward) + Cooperative_Reward
+
+        ### Power Reward 
+        # reward = 1*reward - np.exp(-0.01*(self.deadlines[PS] - AoI)) - np.exp(0.01*(-Cooperative_Reward))
+
+         
+         
+        # reward = 1*reward - np.exp(-0.1*(self.deadlines[PS] - AoI))  - Cooperative_Reward
+        # reward = reward/100000
+
+        # reward = ((self.deadlines[PS] - AoI) - Cooperative_Reward)*reward + 1*(self.deadlines[PS] - AoI) 
         return reward
     def deterministic_reward(self, AoI, PS):
+        # Cooperative_Reward = 0 
+        # for ps in range(1, self.NumOfPS +1 ):
+        #     if ps != PS:
+        #         coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+        #         Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
+        # coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
+        # # Cooperative_Reward =0
+        # reward =  coef*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + (1)*(Cooperative_Reward/1)
+        # if reward == -0:
+        #     reward = 0
+        # return reward
         Cooperative_Reward = 0 
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
-                coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
-                Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
-        coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
-        # Cooperative_Reward =0
-        reward =  coef*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + (1)*(Cooperative_Reward/1)
+                diff =  (((self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])))
+                
+                # Cooperative_Reward += np.exp(-0.1*(diff))
+                Cooperative_Reward += (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+        reward =  1*(self.deadlines[PS] - AoI) + (1)*(Cooperative_Reward)
+        # reward = - np.exp(-0.1*(self.deadlines[PS] - AoI))  - Cooperative_Reward
         if reward == -0:
             reward = 0
         return reward

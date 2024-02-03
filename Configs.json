@@ -1,16 +1,14 @@
 {
     "SimulationParameters": 
     {
-        "TotalCPUCapacity" : 50,
-        "NumberOfPS" : 6,
+        "TotalCPUCapacity": 50,
+        "NumberOfPS": 5,
         "AoI_sensitivity": 0.1,
-        "windows": [40,40,40,40,40,40],
-        "deadlines": [80,80,80,80,80,80],
+        "windows": [50,50,50,50,50,40],
+        "deadlines": [100,100,100,100,100,80],
         "startupdate": [3,3,4,4,5,5],
-        "NumberOfTCh" : 1,
-        "NumberOfBits" : [100,100,100,100,100,100],
-        "NumberOfCpuCycles" : [100,100,100,100,100,100]
-
-
+        "NumberOfTCh": 1,
+        "NumberOfBits": [150,150,150,150,150,150],
+        "NumberOfCpuCycles": [100,100,100,100,100,100]
     }
 }  
