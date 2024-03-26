@@ -15,23 +15,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class NewTD3(object):
     def __init__(self, state_dim, action_dim, N, max_action, epsilon):
-        self.policy_noise = 0.005
-        self.policy_noise_min = 0.004
+        self.policy_noise = 0.5
+        self.policy_noise_min = 0.1
         self.epsilon = epsilon 
         self.Actor = Actor(state_dim = state_dim, action_dim = action_dim, max_action = max_action).to(device = device)
         self.Actor_Target = Actor(state_dim = state_dim, action_dim = action_dim, max_action = max_action).to(device = device)
         self.Actor_Target.load_state_dict(self.Actor.state_dict())
-        self.Actor_optimizer = torch.optim.Adam(self.Actor.parameters() , lr= 0.0000001)
+        self.Actor_optimizer = torch.optim.Adam(self.Actor.parameters() , lr= 0.0001)
         self.Critic = Critic(state_dim = state_dim, action_dim = action_dim , N = N).to(device = device)
         self.Critic_Target = Critic(state_dim = state_dim, action_dim = action_dim, N = N).to(device = device)
         self.Critic_Target.load_state_dict(self.Critic.state_dict())
-        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.0000003)
+        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.0003)
         self.actor_scheduler = lr_scheduler.LinearLR(optimizer= self.Actor_optimizer, start_factor= 1.0, end_factor= 0.001 , total_iters = 1000)
         self.critic_scheduler = lr_scheduler.LinearLR(optimizer= self.Critic_optimizer, start_factor= 1.0, end_factor= 0.001 , total_iters = 1000)
         self.max_action = max_action
+        self.it = 0
     def select_action(self, state):
+ #       if state[2] <= SimulationParams.NumberOfCpuCycles[0]/(SimulationParams.NumberOfCpuCycles[0] + SimulationParams.NumberOfBits[0]):
+
+#            return np.array([0])
+
         if state[2] <= SimulationParams.NumberOfCpuCycles[0]:
             return np.array([0])
+
         else:
             state = torch.tensor(state.reshape(1,-1)).to(device= device)
             state = state.to(torch.float32)
@@ -42,7 +48,7 @@ class NewTD3(object):
         self.Critic_optimizer = central_critic.Critic_optimizer
         self.Critic_Target = central_critic.Critic_Target
         self.critic_scheduler = central_critic.critic_scheduler
-    def train(self, central_critic, iterations, policies, replay_buffers, ps,  batch_size = 100, discount = 0.99, tau = 0.005, noise_clip = 0.05, policy_freq = 200):
+    def train(self, central_critic, iterations, policies, replay_buffers, ps,  batch_size = 256, discount = 0.99, tau = 0.005, noise_clip = 0.5, policy_freq = 2):
         self.update_critic(central_critic = central_critic)
         for it in range(iterations):
             OGstates = {}
@@ -83,8 +89,7 @@ class NewTD3(object):
             target_Q1 , target_Q2 = central_critic.Critic_Target.forward(input)
             target_Q = torch.min(target_Q1, target_Q2)
             target_Q = torch.reshape(target_Q, (-1,))
-            gamma = 0.95
-            target_Q = OGrewards[ps] + (gamma*OGshaped_reward_next[ps] - OGshaped_reward[ps]) + ((1-OGdones[ps])*discount*target_Q).detach()
+            target_Q = OGrewards[ps] + ((1-OGdones[ps])*discount*target_Q).detach()
             currentinput = []
             for p in range(1,NumOfPSs+1):
                 currentinput.append(OGstates[p])
@@ -99,7 +104,7 @@ class NewTD3(object):
             central_critic.Critic_optimizer.zero_grad()
             Critic_Loss.backward()
             central_critic.Critic_optimizer.step()
-            if it % policy_freq == 0:
+            if self.it % policy_freq == 0:
                 OGactions[ps] = abs(self.Actor.forward(OGstates[ps]))
                 input2 = []
                 for p in range(1,NumOfPSs+1):
@@ -116,14 +121,15 @@ class NewTD3(object):
                 for param, target_param in zip(self.Actor.parameters(), self.Actor_Target.parameters()):
                     target_param.data.copy_(tau*param.data + (1-tau)*target_param.data)
             self.policy_noise = self.policy_noise - self.epsilon if self.policy_noise > self.policy_noise_min else self.policy_noise_min
-        ACTOR_before_lr = self.Actor_optimizer.param_groups[0]["lr"]
-        CRITIC_before_lr = central_critic.Critic_optimizer.param_groups[0]["lr"]
+            self.it += 1
+       # ACTOR_before_lr = self.Actor_optimizer.param_groups[0]["lr"]
+       # CRITIC_before_lr = central_critic.Critic_optimizer.param_groups[0]["lr"]
         self.actor_scheduler.step()
         central_critic.critic_scheduler.step()
-        ACTOR_after_lr = self.Actor_optimizer.param_groups[0]["lr"]
-        CRITIC_after_lr = central_critic.Critic_optimizer.param_groups[0]["lr"]
-        print(f"Actor before:{ACTOR_before_lr}, after: {ACTOR_after_lr}")
-        print(f"Critic before:{CRITIC_before_lr}, after: {CRITIC_after_lr}")
+      #  ACTOR_after_lr = self.Actor_optimizer.param_groups[0]["lr"]
+       # CRITIC_after_lr = central_critic.Critic_optimizer.param_groups[0]["lr"]
+        #print(f"Actor before:{ACTOR_before_lr}, after: {ACTOR_after_lr}")
+       # print(f"Critic before:{CRITIC_before_lr}, after: {CRITIC_after_lr}")
         # central_critic.update(self.Critic, self.Critic_Target, self.Critic_optimizer, self.actor_scheduler)
         return central_critic
     def save(self,filename, directory):

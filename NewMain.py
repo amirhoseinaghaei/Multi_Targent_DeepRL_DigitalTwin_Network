@@ -19,7 +19,13 @@ import json
 
 NumberOfPS = SimulationParams.NumberOfPS
 
-def evaluate_policy(Env, policy, eval_episodes = 10):
+def add_gaussian_noise(action, expl_noise =0.002, min_action=0, max_action=1.0):
+    noise = np.random.normal(0, max_action * expl_noise, size= 1)
+    noisy_action = action + noise
+    clipped_action = np.clip(noisy_action, min_action, max_action)
+    return clipped_action
+
+def evaluate_policy(Env, policy, eval_episodes = 30):
   signal = False
   scores = dict()
   cumulative = dict()
@@ -55,7 +61,8 @@ def evaluate_policy(Env, policy, eval_episodes = 10):
       time += 1
       for i in range(1,NumberOfPS+1):
         avg_reward[i] += rewards[i]
-        AoIs[i] += states[i][1]
+#        AoIs[i] += states[i][1] * SimulationParams.deadlines[0]
+        AoIs[i] += states[i][1]     
         powers[i] += action[i][0]
         cr_reward[i] += rewards[i]
     for i in range(1,NumberOfPS+1):
@@ -67,23 +74,25 @@ def evaluate_policy(Env, policy, eval_episodes = 10):
       scores[i] = scores[i]/eval_episodes
   signal = True
   for i in range(1,NumberOfPS+1):
-    if AoIs[i] >= 100*80 - 1000:
+    if avg_reward[i] < -300:
         signal = False
         break
   return avg_reward, signal , scores, AoIs , powers
 save_models = True
-expl_noise_min = 0.001
+expl_noise_min = 0.01
 epsilon = 5e-4
-expl_noise = 0.002
 eval_freq = 200
-batch_size = 100
+batch_size = 256
 tau = 0.005
 discount = 0.99
-noise_clip =  0.005
-policy_noise = 0.005
+expl_noise = 0.1
+eps = 0.5
+delta_eps = 2e-5
+eps_min = 0.02
+noise_clip =  0.5
 policy_freq = 2
-max_timesteps = 2e5
-start_timesteps = 2e3
+max_timesteps = 50e3
+start_timesteps = 20e3
 total_timesteps = 0
 episode_num = dict()
 episode_reward = dict()
@@ -127,7 +136,7 @@ next_states3 = dict()
 next_states4 = dict()
 
 next_statesRandom = dict()
-Env = CustumEnv(NumberOfPS, 100)
+Env = CustumEnv(NumberOfPS, 5)
 Env2 = CustumEnv(NumberOfPS , 50)
 Env3 = CustumEnv(NumberOfPS , 15)
 Env4 = CustumEnv(NumberOfPS , 25)
@@ -462,8 +471,8 @@ else:
     # ax.autoscale_view()
     # plt.pause(0.1)
   while total_timesteps < max_timesteps :
-    if total_timesteps >= 12000:
-      break
+ #   if total_timesteps >= 10000:
+#      break
     TimeSteps["Time"] = total_timesteps
     Json1 = json.dumps(TimeSteps)
     f = open("./results/Time.json","w")
@@ -498,8 +507,8 @@ else:
           f.write(Json3)
           f.close()
     for ps in range(1,NumberOfPS+1):
-      if total_timesteps%50 == 0 and total_timesteps > 200:
-        central_critic = policy[ps].train(central_critic, 200, policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
+      if total_timesteps%1 == 0 and total_timesteps > 200:
+        central_critic = policy[ps].train(central_critic, 1 , policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
         policy[ps].save(f"{ps}th PS", "./pytorch_models")
       if episode_timesteps[ps] >= 200:
         if total_timesteps != 0:
@@ -516,28 +525,33 @@ else:
           episode_num[ps] += 1
 
       if total_timesteps < start_timesteps:
-        actions[ps] = np.random.uniform(0,policy[ps].max_action,1)
-
+         actions[ps] = np.random.uniform(0,policy[ps].max_action,1)
+#        print(actions[ps])
       else:
-          actions[ps] = policy[ps].select_action(states[ps])
-          actions[ps] = abs(actions[ps])
-          print(f"PS: {ps}, Action: {actions[ps]}")
-          actions[ps] = (actions[ps] + np.random.normal(0,expl_noise,1)).clip(0, policy[ps].max_action) 
-          # actions[ps] = abs(actions[ps])
-
-    next_states, rewards, done, terminal = Env.step(actions, total_timesteps) 
+#         if np.random.rand() < eps:
+#            actions[ps] = np.random.uniform(0,policy[ps].max_action,1)
+#         else:
+         actions[ps] = policy[ps].select_action(states[ps])
+         actions[ps] = abs(actions[ps])
+         actions[ps] = (actions[ps] + np.random.normal(0,expl_noise,1)).clip(0, policy[ps].max_action) 
+        
+#actions[ps] = abs(add_gaussian_noise(actions[ps]))
+#             actions[ps] = abs(actions[ps])
+    next_states, rewards, done, terminal = Env.step(actions, total_timesteps)  
+#    print(rewards)
     next_states = {
             i: np.array(list(next_states[0][f"ps{i}"]) + [next_states[1][f"ps{i}"]] + [next_states[2][f"ps{i}"]])
             for i in range(1, NumberOfPS + 1)
     }
     for ps in range(1,NumberOfPS+1):
       episode_reward[ps] += rewards[ps]
-      shaped_reward = 1 + ((episode_reward[ps] - max_episode_reward[ps])/(max_episode_reward[ps] - min_episode_reward[ps]))
+#      shaped_reward = 1 + ((episode_reward[ps] - max_episode_reward[ps])/(max_episode_reward[ps] - min_episode_reward[ps]))
+      shaped_reward = 0 
       if done[ps] == 1:
         if terminal[ps] == 1 or episode_timesteps[ps] == 200:
-          replay_buffer[ps].add((states[ps], actions[ps], next_states[ps], rewards[ps], done[ps], shaped_reward))
+          replay_buffer[ps].add((states[ps], actions[ps], next_states[ps], rewards[ps], terminal[ps], shaped_reward))
       else:
-        replay_buffer[ps].add((states[ps], actions[ps],next_states[ps], rewards[ps], done[ps], shaped_reward))
+        replay_buffer[ps].add((states[ps], actions[ps],next_states[ps], rewards[ps], terminal[ps], shaped_reward))
       episode_timesteps[ps] += 1
     
 
@@ -545,6 +559,7 @@ else:
 
     states = next_states
     total_timesteps += 1
-    expl_noise = expl_noise - epsilon if expl_noise > expl_noise_min else expl_noise_min
-
-  plt.show()
+    epsilon = 5e-5
+    if total_timesteps > start_timesteps:
+       eps = eps - delta_eps if  eps > eps_min else eps_min
+       expl_noise = expl_noise - epsilon if expl_noise > expl_noise_min else expl_noise_min

@@ -171,28 +171,36 @@ class CustumEnv(gym.Env):
         for i in (action):
             reward += i
         reward = -1*reward
+#        reward = 0 
         # if reward == 0:
         #     reward = 0.00001
         Cooperative_Reward = 0 
+        CooperativeSum = 0
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
                 diff =  (((self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])))
-                
-                # Cooperative_Reward += np.exp(-0.1*(diff))
-                Cooperative_Reward += diff
+                if diff > 0 :
+                   coef = 0.1
+                else:
+                   coef = 1
+                CooperativeSum += diff
+                Cooperative_Reward += coef*diff
         # /(0.5* (-1*reward))
         # ## Simple reward
         
-        # reward = 1*reward + 1*(self.deadlines[PS] - AoI)  + Cooperative_Reward
+        if (self.deadlines[PS] - AoI) > 0 :
+           beta = 0.2
+        else:
+           beta = 1
+        reward =  0.1*reward +  1*(self.deadlines[PS] - AoI)  +  Cooperative_Reward
 
 
-        reward = ((self.deadlines[PS] - AoI)  - 0.9 * Cooperative_Reward) * reward + (self.deadlines[PS] - AoI)
+        #reward = ((1 * (self.deadlines[PS] - AoI)) +  (-1 * Cooperative_Reward)) * reward + (self.deadlines[PS] - AoI) +  1 * Cooperative_Reward
 
 
         ### Reciprocal Reward
         # if (self.deadlines[PS] - AoI -10) > 0: 
         #     reward = ((self.deadlines[PS] - AoI - 10) / reward) + Cooperative_Reward
-
         # elif (self.deadlines[PS] - AoI -10) == 0:
         #     reward = ((10) / (-1*reward)) + Cooperative_Reward
         # else:
@@ -224,9 +232,12 @@ class CustumEnv(gym.Env):
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
                 diff =  (((self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])))
-                
+                if diff > 0:
+                   coef = 1
+                else:
+                   coef = 1
                 # Cooperative_Reward += np.exp(-0.1*(diff))
-                Cooperative_Reward += (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
+                Cooperative_Reward += coef*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
         reward =  1*(self.deadlines[PS] - AoI) + (1)*(Cooperative_Reward)
         # reward = - np.exp(-0.1*(self.deadlines[PS] - AoI))  - Cooperative_Reward
         if reward == -0:
