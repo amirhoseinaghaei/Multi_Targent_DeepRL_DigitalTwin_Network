@@ -28,7 +28,7 @@ class WirelessChannel():
                     # ((y+1)*0.3)/self.gen_Sum()
                     row.append(((y+0.5)*0.2)/self.gen_Sum())
                 self.gain_transition_matrix[ps].append(row)
-        print(len(self.gain_transition_matrix[1]))
+    #    print(len(self.gain_transition_matrix[1]))
         return self.gain_transition_matrix
     def gen_Sum(self):
         sum = 0

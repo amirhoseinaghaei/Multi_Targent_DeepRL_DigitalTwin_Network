@@ -25,7 +25,7 @@ def add_gaussian_noise(action, expl_noise =0.002, min_action=0, max_action=1.0):
     clipped_action = np.clip(noisy_action, min_action, max_action)
     return clipped_action
 
-def evaluate_policy(Env, policy, eval_episodes = 30):
+def evaluate_policy(Env, policy, eval_episodes = 20):
   signal = False
   scores = dict()
   cumulative = dict()
@@ -81,7 +81,7 @@ def evaluate_policy(Env, policy, eval_episodes = 30):
 save_models = True
 expl_noise_min = 0.01
 epsilon = 5e-4
-eval_freq = 200
+eval_freq = 500
 batch_size = 256
 tau = 0.005
 discount = 0.99
@@ -91,7 +91,7 @@ delta_eps = 2e-5
 eps_min = 0.02
 noise_clip =  0.5
 policy_freq = 2
-max_timesteps = 50e3
+max_timesteps = 20e4
 start_timesteps = 20e3
 total_timesteps = 0
 episode_num = dict()
@@ -136,7 +136,7 @@ next_states3 = dict()
 next_states4 = dict()
 
 next_statesRandom = dict()
-Env = CustumEnv(NumberOfPS, 5)
+Env = CustumEnv(NumberOfPS, 150)
 Env2 = CustumEnv(NumberOfPS , 50)
 Env3 = CustumEnv(NumberOfPS , 15)
 Env4 = CustumEnv(NumberOfPS , 25)
@@ -334,7 +334,7 @@ if Test == True:
     statesRandom = next_statesRandom
 
     total_timesteps += 1
-  print(Max_Steps)
+  # print(Max_Steps)
   print(f"Average power usage for ps1 with RL scheduler - Cooperative: {sum(Power_dict['1'])/len(Power_dict['1'])}")
   print(f"Average power usage for ps2 with RL scheduler - Cooperative: {sum(Power_dict['2'])/len(Power_dict['2'])}")
   print(f"Average power usage for ps3 with RL scheduler - Cooperative: {sum(Power_dict['3'])/len(Power_dict['3'])}")
@@ -466,28 +466,19 @@ else:
   def update(val):
     x_data.append(total_timesteps)
     y_data.append(val)
-    # line.set_data(x_data, y_data) 
-    # ax.relim()
-    # ax.autoscale_view()
-    # plt.pause(0.1)
   while total_timesteps < max_timesteps :
- #   if total_timesteps >= 10000:
-#      break
-    TimeSteps["Time"] = total_timesteps
-    Json1 = json.dumps(TimeSteps)
-    f = open("./results/Time.json","w")
-    f.write(Json1)
-    f.close()
-    print(timesteps_since_eval)
     if timesteps_since_eval >= eval_freq:
+          TimeSteps["Time"] = total_timesteps
+          Json1 = json.dumps(TimeSteps)
+          f = open("./results/Time.json","w")
+          f.write(Json1)
+          f.close()
           timesteps_since_eval %= eval_freq
           res, signal, score , Avg_AoI , Avg_power = evaluate_policy(Env= Env, policy= policy)
-          # update(res[1])
           if signal == True:
             break_point += 1
-          if break_point == 10:
+          if break_point == 5:
             break
-          Evaluations.append(score)
           for ps in range(1,NumberOfPS+1):
             Results[ps].append(res[ps])
           Json = json.dumps(Results)
@@ -509,49 +500,32 @@ else:
     for ps in range(1,NumberOfPS+1):
       if total_timesteps%1 == 0 and total_timesteps > 200:
         central_critic = policy[ps].train(central_critic, 1 , policy, replay_buffer, ps, batch_size, discount, tau, noise_clip, policy_freq)
+      if total_timesteps%50 == 0 and total_timesteps > 200:
         policy[ps].save(f"{ps}th PS", "./pytorch_models")
       if episode_timesteps[ps] >= 200:
         if total_timesteps != 0:
-          print(f"PS: {ps}, Total Timesteps: {total_timesteps}, Episode Num: {episode_num[ps]}, Reward: {episode_reward[ps]}")
-          # print(central_critic.Critic.state_dict())
           states[ps] = Env.reset(ps= ps)
           done[ps] = False
-          if episode_reward[ps] > max_episode_reward[ps]:
-              max_episode_reward[ps] = episode_reward[ps]
-          elif episode_reward[ps] < min_episode_reward[ps]:
-              min_episode_reward[ps] = episode_reward[ps]
           episode_reward[ps] = 0
           episode_timesteps[ps] = 0
           episode_num[ps] += 1
 
       if total_timesteps < start_timesteps:
          actions[ps] = np.random.uniform(0,policy[ps].max_action,1)
-#        print(actions[ps])
       else:
-#         if np.random.rand() < eps:
-#            actions[ps] = np.random.uniform(0,policy[ps].max_action,1)
-#         else:
          actions[ps] = policy[ps].select_action(states[ps])
          actions[ps] = abs(actions[ps])
          actions[ps] = (actions[ps] + np.random.normal(0,expl_noise,1)).clip(0, policy[ps].max_action) 
         
-#actions[ps] = abs(add_gaussian_noise(actions[ps]))
-#             actions[ps] = abs(actions[ps])
     next_states, rewards, done, terminal = Env.step(actions, total_timesteps)  
-#    print(rewards)
     next_states = {
             i: np.array(list(next_states[0][f"ps{i}"]) + [next_states[1][f"ps{i}"]] + [next_states[2][f"ps{i}"]])
             for i in range(1, NumberOfPS + 1)
     }
     for ps in range(1,NumberOfPS+1):
       episode_reward[ps] += rewards[ps]
-#      shaped_reward = 1 + ((episode_reward[ps] - max_episode_reward[ps])/(max_episode_reward[ps] - min_episode_reward[ps]))
       shaped_reward = 0 
-      if done[ps] == 1:
-        if terminal[ps] == 1 or episode_timesteps[ps] == 200:
-          replay_buffer[ps].add((states[ps], actions[ps], next_states[ps], rewards[ps], terminal[ps], shaped_reward))
-      else:
-        replay_buffer[ps].add((states[ps], actions[ps],next_states[ps], rewards[ps], terminal[ps], shaped_reward))
+      replay_buffer[ps].add((states[ps], actions[ps],next_states[ps], rewards[ps], terminal[ps], shaped_reward))
       episode_timesteps[ps] += 1
     
 

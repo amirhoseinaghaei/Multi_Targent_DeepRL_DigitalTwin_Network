@@ -233,7 +233,7 @@ class CustumEnv(gym.Env):
             if ps != PS:
                 diff =  (((self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])))
                 if diff > 0:
-                   coef = 1
+                   coef = 0.1
                 else:
                    coef = 1
                 # Cooperative_Reward += np.exp(-0.1*(diff))

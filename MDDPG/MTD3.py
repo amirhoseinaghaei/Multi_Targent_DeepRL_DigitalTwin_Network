@@ -21,11 +21,11 @@ class NewTD3(object):
         self.Actor = Actor(state_dim = state_dim, action_dim = action_dim, max_action = max_action).to(device = device)
         self.Actor_Target = Actor(state_dim = state_dim, action_dim = action_dim, max_action = max_action).to(device = device)
         self.Actor_Target.load_state_dict(self.Actor.state_dict())
-        self.Actor_optimizer = torch.optim.Adam(self.Actor.parameters() , lr= 0.0001)
+        self.Actor_optimizer = torch.optim.Adam(self.Actor.parameters() , lr= 0.00003)
         self.Critic = Critic(state_dim = state_dim, action_dim = action_dim , N = N).to(device = device)
         self.Critic_Target = Critic(state_dim = state_dim, action_dim = action_dim, N = N).to(device = device)
         self.Critic_Target.load_state_dict(self.Critic.state_dict())
-        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.0003)
+        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.00004)
         self.actor_scheduler = lr_scheduler.LinearLR(optimizer= self.Actor_optimizer, start_factor= 1.0, end_factor= 0.001 , total_iters = 1000)
         self.critic_scheduler = lr_scheduler.LinearLR(optimizer= self.Critic_optimizer, start_factor= 1.0, end_factor= 0.001 , total_iters = 1000)
         self.max_action = max_action

@@ -4,11 +4,11 @@
         "TotalCPUCapacity": 50,
         "NumberOfPS": 5,
         "AoI_sensitivity": 0.1,
-        "windows": [45,45,45,45,45,40],
-        "deadlines": [90,90,90,90,90,80],
+        "windows": [50,50,50,50,50,40],
+        "deadlines": [100,100,100,100,100,80],
         "startupdate": [3,3,4,4,5,5],
         "NumberOfTCh": 1,
-        "NumberOfBits": [120,120,120,120,120,100],
+        "NumberOfBits": [140,140,140,140,140,100],
         "NumberOfCpuCycles": [100,100,100,100,100,100]
     }
 }  
