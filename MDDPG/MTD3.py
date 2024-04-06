@@ -136,5 +136,5 @@ class NewTD3(object):
         torch.save(self.Actor.state_dict(), f"{directory}/{filename}_actor.pth")
         torch.save(self.Critic.state_dict(), f"{directory}/{filename}_critic.pth")
     def load(self,filename, directory):
-        self.Actor.load_state_dict(torch.load(f"{directory}/{filename}_actor.pth"))
-        self.Critic.load_state_dict(torch.load(f"{directory}/{filename}_critic.pth"))
+        self.Actor.load_state_dict(torch.load(f"{directory}/{filename}_actor.pth", map_location= torch.device('cpu')))
+        self.Critic.load_state_dict(torch.load(f"{directory}/{filename}_critic.pth", map_location= torch.device('cpu')))
