@@ -8,7 +8,7 @@
         "deadlines": [100,100,100,100,100,80],
         "startupdate": [3,3,4,4,5,5],
         "NumberOfTCh": 1,
-        "NumberOfBits": [140,140,140,140,140,100],
+        "NumberOfBits": [140,140,140,140,140,180],
         "NumberOfCpuCycles": [100,100,100,100,100,100]
     }
 }  
