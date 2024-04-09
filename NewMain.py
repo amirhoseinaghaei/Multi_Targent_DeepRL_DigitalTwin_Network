@@ -136,7 +136,7 @@ next_states3 = dict()
 next_states4 = dict()
 
 next_statesRandom = dict()
-Env = CustumEnv(NumberOfPS, 5)
+Env = CustumEnv(NumberOfPS, 20)
 Env2 = CustumEnv(NumberOfPS , 50)
 Env3 = CustumEnv(NumberOfPS , 15)
 Env4 = CustumEnv(NumberOfPS , 25)

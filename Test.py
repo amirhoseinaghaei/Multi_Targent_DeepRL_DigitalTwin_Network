@@ -77,9 +77,9 @@ def evaluate_policy(Env, policy, eval_episodes = 20):
 
 Test = True
 Results = {"100":{"simple" : {"AoI":[], "Power":[]}, "nonsimple_0.01": {"AoI":[], "Power":[]}}, "120":{"simple" : {"AoI":[], "Power":[]}, "nonsimple_0.01": {"AoI":[], "Power":[]}}, "140":{"simple" : {"AoI":[], "Power":[]}, "nonsimple_0.01": {"AoI":[], "Power":[]}}}
-bits = ["100", "120"]
-reward_mode = ["simple", "nonsimple_0.01"]
-channelList = [5,10,20,50,100,150,200]
+bits = ["100","120", "140"]
+reward_mode = ["nonsimple_0.01"]
+channelList = [10,20,50,100,150,200]
 if Test == True:
   for bit in bits:
     for rew in reward_mode:
@@ -99,7 +99,7 @@ if Test == True:
         noise_clip =  0.005
         policy_noise = 0.005
         policy_freq = 2
-        max_timesteps = 1e3
+        max_timesteps = 3e3
         start_timesteps = 0e3
         total_timesteps = 0
         episode_num = dict()
@@ -224,7 +224,9 @@ if Test == True:
               if int(bit) == 140:
                 if AoI_dict[f"{ps}"][index] > 100:
                   error += 1
-          # 
+              if int(bit) == 180:
+                if AoI_dict[f"{ps}"][index] > 120:
+                  error += 1
           AoI_Violoation_Probability[ps] = (error/len( AoI_dict[f"{ps}"]))*100
         mean = 0
 
@@ -235,23 +237,29 @@ if Test == True:
         Results[bit][rew]["Power"].append(average_power)
       
   plt.figure(1)
-  plt.title("Comparison of AoI violation with different number of transmission bits  with simple and non-simple reward")
-  plt.plot(channelList, Results["100"]["simple"]["AoI"], label = "Average AoI Violation of all PSs 100 bits- fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
-  plt.plot(channelList, Results["120"]["simple"]["AoI"], label = "Average AoI Violation of all PSs 120 bits- fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
-  plt.plot(channelList, Results["120"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs 120 bits - αᵢ using equation 21",  linestyle = "solid", marker = "*")
-  plt.plot(channelList, Results["100"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs 100 bits- αᵢ using equation 21",  linestyle = "solid", marker = "s")
+  plt.title("AoI violation Comparison with different number of channel states")
+  # plt.plot(channelList, Results["100"]["simple"]["AoI"], label = "Average AoI Violation of all PSs 100 bits- fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
+  # plt.plot(channelList, Results["180"]["simple"]["AoI"], label = "Average AoI Violation of all PSs, 180 bits- αᵢ = 1",  linestyle = "dashed", marker = "*", color = "blue")
+  plt.plot(channelList, Results["100"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs, 100 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+  plt.plot(channelList, Results["120"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs, 120 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+  plt.plot(channelList, Results["140"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs, 140 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+
+  # plt.plot(channelList, Results["100"]["nonsimple_0.01"]["AoI"] , label = "AoI Violation of all PSs 100 bits- αᵢ using equation 21",  linestyle = "solid", marker = "s")
   plt.ylabel("Average AoI Violation Probability")
   plt.xlabel('Nₖ')
   plt.xticks(channelList, labels=[f'{x}' for x in channelList])
   plt.legend(loc = "upper left")
 
   plt.figure(2)
-  plt.title("Comparison Power Usage with different number of transmission bits  with simple and non-simple reward")
-  plt.plot(channelList, Results["100"]["simple"]["Power"], label = "Average Power Usage of all PSs 100 bits - fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
-  plt.plot(channelList, Results["120"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs 120 bits - αᵢ using equation 21",  linestyle = "solid", marker = "*")
-  plt.plot(channelList, Results["100"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs 100 bits - αᵢ using equation 21",  linestyle = "solid", marker = "s")
-  plt.plot(channelList, Results["120"]["simple"]["Power"], label = "Average Power Usage of all PSs 120 bits - fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
-  plt.ylabel("Average Power Usage Probability")
+  plt.title("Power Usage Comparison with different number of channel states")
+  # plt.plot(channelList, Results["100"]["simple"]["Power"], label = "Average Power Usage of all PSs 100 bits - fixed αᵢ = 1",  linestyle = "dashed", marker = "*")
+  plt.plot(channelList, Results["100"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs, 100 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+  plt.plot(channelList, Results["120"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs, 120 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+  plt.plot(channelList, Results["140"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs, 140 bits - αᵢ = 0.1",  linestyle = "solid", marker = "*")
+
+  # plt.plot(channelList, Results["100"]["nonsimple_0.01"]["Power"] , label = "Average Power Usage of all PSs 100 bits - αᵢ using equation 21",  linestyle = "solid", marker = "s")
+  # plt.plot(channelList, Results["180"]["simple"]["Power"], label = "Average Power Usage of all PSs, 180 bits - αᵢ = 1",  linestyle = "dashed", marker = "*", color = "blue")
+  plt.ylabel("Average Power Usage")
   plt.xlabel('Nₖ')
   plt.xticks(channelList, labels=[f'{x}' for x in channelList])
   plt.legend(loc = "upper left")

@@ -14,7 +14,7 @@ class Central_Critic(object):
         self.Critic = Critic(state_dim = state_dim, action_dim = action_dim , N = N).to(device = device)
         self.Critic_Target = Critic(state_dim = state_dim, action_dim = action_dim, N = N).to(device = device)
         self.Critic_Target.load_state_dict(self.Critic.state_dict())
-        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.00004)
+        self.Critic_optimizer = torch.optim.Adam(self.Critic.parameters(), lr= 0.00001)
         self.critic_scheduler = lr_scheduler.LinearLR(optimizer= self.Critic_optimizer, start_factor= 1.0, end_factor= 0.001 , total_iters = 1000)
     def update(self,critic, critic_target, critic_optimizer, critic_scheduler):
         self.Critic = critic
