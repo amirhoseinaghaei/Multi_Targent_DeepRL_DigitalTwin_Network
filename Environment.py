@@ -1,4 +1,5 @@
 import copy
+import math
 import gym 
 from gym import spaces
 import numpy as np
@@ -21,7 +22,8 @@ AoI_sensitivity = SimulationParams.AoI_sensitivity
 class CustumEnv(gym.Env):
    
     def __init__(self, NumOfPS, NumOfGainstates):
-      self.Wireless_Tr_Channels = WirelessChannel(0.0000001,21 , NumOfPSs= NumberOfPS ,NumOfGainstates= NumOfGainstates)
+      self.Wireless_Tr_Channels = WirelessChannel(1e-17,5e6, SimulationParams.NumberOfPS, SimulationParams.NumOfGainStates, SimulationParams.psType,SimulationParams.GainMapping, SimulationParams.GainProbabilityMapping)
+    #   self.Wireless_Tr_Channels = WirelessChannel(0.0000001,21 , NumOfPSs= NumberOfPS ,NumOfGainstates= NumOfGainstates)
       self.Wireless_Tr_Channels.generate_gain_list()
       self.Wireless_Tr_Channels.generate_transition_probability_matrix()
       
@@ -110,7 +112,7 @@ class CustumEnv(gym.Env):
                 else:
                     done[ps] = 0 
                 terminal[ps] = 0
-                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 1, PS = ps )
+                reward[ps] = self.stochastic_reward(action=action[ps], AoI=(self._ps_AoI[f'ps{ps}']+1), AoI_weight= 1, PS = ps )
             elif self.CPU_Dict[ps] < self._ps_U[f"ps{ps}"] <= self.Bits_Dict[ps] + self.CPU_Dict[ps] and time%(self.windows[ps]) != self.start_update[ps] and time >= self.start_update[ps]:
                 self.AoIs_Dict[ps].append((self._ps_AoI[f"ps{ps}"], time))
                 self.Data_Dict[ps].append((self._ps_U[f"ps{ps}"],time))
@@ -119,7 +121,7 @@ class CustumEnv(gym.Env):
                 self._ps_U[f"ps{ps}"] = np.maximum(self.CPU_Dict[ps],self._ps_U[f"ps{ps}"] - self.Wireless_Tr_Channels.calculate_transmission_rate(channel_gain= list(self._get_obs(ps)["Channel_Gain"]), interference_gain = self._get_info(ps)["Interference_Channel_Gain"] , interference_power = rest_action, power= action[ps]))
                 if (time+1)%(self.windows[ps]) == self.start_update[ps]:
                     self._ps_U[f"ps{ps}"] = self.Bits_Dict[ps] + self.CPU_Dict[ps]
-                reward[ps] = self.stochastic_reward(action=action[ps], AoI=self._ps_AoI[f'ps{ps}'], AoI_weight= 1, PS = ps )
+                reward[ps] = self.stochastic_reward(action=action[ps], AoI=(self._ps_AoI[f'ps{ps}'] +1), AoI_weight= 1, PS = ps )
                 if self._ps_U[f"ps{ps}"] == self.CPU_Dict[ps]:
                     done[ps] = 1
                 else:
@@ -145,35 +147,51 @@ class CustumEnv(gym.Env):
                     self._ps_U[f"ps{n}"] = self.Bits_Dict[n] + self.CPU_Dict[n]
                 if self._ps_U[f"ps{n}"] == 0 and self._ps_AoI[f'ps{n}'] > self.windows[n]:
                     self._ps_AoI[f'ps{n}'] = time  - (((time- self.start_update[n]) // self.windows[n])*self.windows[n] + self.start_update[n]) + 1
-                reward[ps] = self.deterministic_reward(AoI= self._ps_AoI[f'ps{n}'], PS= n)
+                reward[ps] = self.deterministic_reward(AoI= (self._ps_AoI[f'ps{n}'] +1), PS= n)
             if len(self.E) == 0:
                 break    
         for ps in range(1, self.NumOfPS +1 ):
             self._ps_AoI[f"ps{ps}"] += 1
+            # self.channel_gains_transition(ps)
+        return  reward, done, terminal    
+    
+
+    def redistributeReward(self,t,rewards):
+        Gt = 0
+        for i in range(t,t+len(rewards)):
+            Gt += rewards[i-t] * math.pow(0.99,i-t)
+        # Gtp = 0 
+        # for i in range(t+1,t+len(rewards)):
+        #     Gtp += rewards[i-t] * (0.99)**(i-(t+1))
+        return Gt
+    def stepWithStepSize(self, action, time, stepSize):
+        finalRewards = dict()
+        isTerminals = dict()
+        for ps in range(1, self.NumOfPS +1 ):
+            isTerminals[ps] = 0
+            finalRewards[ps] = 0
+        rewards = []
+        for step in range(stepSize):
+            reward, done, terminal = self.step(action, time + step)
+            rewards.append(reward)
+            for ps in range(1, self.NumOfPS +1 ):
+                if terminal[ps] == 1: 
+                    isTerminals[ps] = 1
+                    finalRewards[ps] = reward[ps]
+
+        values = {k: [d.get(k, 0) for d in rewards] for k in range(1, NumberOfPS+1)}
+        for ps in range(1, self.NumOfPS +1 ):
+            finalRewards[ps] = self.redistributeReward(time,values[ps])
+        for ps in range(1, self.NumOfPS +1 ):
+            # if finalRewards[ps] == 0:
+            # finalRewards[ps] = reward[ps]
             self.channel_gains_transition(ps)
-        return (self._ps_gain, self._ps_AoI, self._ps_U), reward, done, terminal    
+        return (self._ps_gain, self._ps_AoI, self._ps_U), finalRewards, done, isTerminals
     def stochastic_reward(self, action, AoI, AoI_weight , PS):
-        # reward = 0
-        # for i in (action):
-        #     reward += i
-        # reward = -1*reward
-        # Cooperative_Reward = 0 
-        # for ps in range(1, self.NumOfPS +1 ):
-        #     if ps != PS:
-        #         coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
-        #         Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
-        
-        # coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
-        # # Cooperative_Reward =0
-        # power_coef = 0 if (self.deadlines[PS] - AoI) <= 0 else (self.deadlines[PS] - AoI)/10
-        # reward = power_coef*reward + AoI_weight*(coef)*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + AoI_weight*(1)*(Cooperative_Reward/1)
         reward = 0
         for i in (action):
             reward += i
         reward = -1*reward
-#        reward = 0 
-        # if reward == 0:
-        #     reward = 0.00001
         Cooperative_Reward = 0 
         CooperativeSum = 0
         for ps in range(1, self.NumOfPS +1 ):
@@ -185,8 +203,6 @@ class CustumEnv(gym.Env):
                    coef = 1
                 CooperativeSum += diff
                 Cooperative_Reward += coef*diff
-        # /(0.5* (-1*reward))
-        # ## Simple reward
         
         if (self.deadlines[PS] - AoI) > 0 :
            beta = 0.2
@@ -194,40 +210,8 @@ class CustumEnv(gym.Env):
            beta = 1
         reward =  0.1*reward +  1*(self.deadlines[PS] - AoI)  +  Cooperative_Reward
 
-
-        #reward = ((1 * (self.deadlines[PS] - AoI)) +  (-1 * Cooperative_Reward)) * reward + (self.deadlines[PS] - AoI) +  1 * Cooperative_Reward
-
-
-        ### Reciprocal Reward
-        # if (self.deadlines[PS] - AoI -10) > 0: 
-        #     reward = ((self.deadlines[PS] - AoI - 10) / reward) + Cooperative_Reward
-        # elif (self.deadlines[PS] - AoI -10) == 0:
-        #     reward = ((10) / (-1*reward)) + Cooperative_Reward
-        # else:
-        #     reward = (((self.deadlines[PS] - AoI -10 )*100) / reward) + Cooperative_Reward
-
-        ### Power Reward 
-        # reward = 1*reward - np.exp(-0.01*(self.deadlines[PS] - AoI)) - np.exp(0.01*(-Cooperative_Reward))
-
-         
-         
-        # reward = 1*reward - np.exp(-0.1*(self.deadlines[PS] - AoI))  - Cooperative_Reward
-        # reward = reward/100000
-
-        # reward = ((self.deadlines[PS] - AoI) - Cooperative_Reward)*reward + 1*(self.deadlines[PS] - AoI) 
         return reward
     def deterministic_reward(self, AoI, PS):
-        # Cooperative_Reward = 0 
-        # for ps in range(1, self.NumOfPS +1 ):
-        #     if ps != PS:
-        #         coef = -1 if (self.deadlines[ps] - self._ps_AoI[f'ps{ps}']) <= 0 else (self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
-        #         Cooperative_Reward += coef*np.exp(-AoI_sensitivity*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}']))
-        # coef = -1 if (self.deadlines[PS] - AoI) <= 0 else -1/(self.deadlines[PS] - AoI)
-        # # Cooperative_Reward =0
-        # reward =  coef*(np.exp(-AoI_sensitivity*(self.deadlines[PS] - AoI))/1) + (1)*(Cooperative_Reward/1)
-        # if reward == -0:
-        #     reward = 0
-        # return reward
         Cooperative_Reward = 0 
         for ps in range(1, self.NumOfPS +1 ):
             if ps != PS:
@@ -240,8 +224,8 @@ class CustumEnv(gym.Env):
                 Cooperative_Reward += coef*(self.deadlines[ps] - self._ps_AoI[f'ps{ps}'])
         reward =  1*(self.deadlines[PS] - AoI) + (1)*(Cooperative_Reward)
         # reward = - np.exp(-0.1*(self.deadlines[PS] - AoI))  - Cooperative_Reward
-        if reward == -0:
-            reward = 0
+        # if reward == -0:
+        #     reward = 0
         return reward
     def reset_all_agents():
       TotalCPU  = TotalCPUCapacity

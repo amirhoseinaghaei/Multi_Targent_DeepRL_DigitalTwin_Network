@@ -13,6 +13,11 @@ class SimulationParameters():
         self.startupdate = self.SimulationParameters.get("startupdate")
         self.deadlines = self.SimulationParameters.get("deadlines")
         self.AoI_sensitivity = self.SimulationParameters.get("AoI_sensitivity")
+        self.NumOfGainStates = self.SimulationParameters.get("NumOfGainStates")
+        self.psType = self.SimulationParameters.get("psType")
+        self.GainMapping = self.SimulationParameters.get("GainMapping")
+        self.GainProbabilityMapping = self.SimulationParameters.get("GainProbabilityMapping")
+        self.TimestepSize = self.SimulationParameters.get("TimestepSize")
 
 
 
